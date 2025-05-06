@@ -112,7 +112,7 @@ class Level:
 
     def update(self, surface,keys):
         self.current_time=pygame.time.get_ticks()
-        self.player.update(keys)
+        self.player.update(keys,self)
         if self.player.dead:
             if self.current_time-self.player.death_timer>3000:
                 self.finished=True
@@ -189,15 +189,17 @@ class Level:
                 shell.state='slide'
         powerup=pygame.sprite.spritecollideany(self.player,self.power_up_group)
         if powerup:
-            powerup.kill()
+            if powerup.name=='fireball':
+                pass
             if powerup.name=='mushroom':
                 self.player.state='small2big'
+                powerup.kill()
             if powerup.name=='fireflower':
                 if not self.player.big:
                     self.player.state = 'small2big'
                 elif self.player.big and not self.player.fire:
                     self.player.state = 'big2fire'
-        # 金币碰撞检测已移至check_coin_collisions方法
+                powerup.kill()
     def check_y_collisions(self):
         ground_item=pygame.sprite.spritecollideany(self.player,self.ground_item_group)
         brick=pygame.sprite.spritecollideany(self.player,self.brick_group)

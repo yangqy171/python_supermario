@@ -3,7 +3,8 @@ from.. import tools,setup
 from.. import constants as C
 def create_powerup(centerx,centery,powerup_type):
     if powerup_type==1:
-        return Coin(centerx,centery)
+        #return Coin(centerx,centery)
+        pass
     elif powerup_type==4:
         return Fireflower(centerx,centery)
     elif powerup_type==3:
@@ -104,25 +105,88 @@ class LifeMushroom(Powerup):
     pass
 class Star(Powerup):
     pass
-class Coin(Powerup):
-    def __init__(self,centerx,centery):
-        frame_rects=[(52, 113, 8, 14), (4, 113, 8, 14), 
-                        (20, 113, 8, 14), (36, 113, 8, 14)]
+# class Coin(Powerup):
+#     def __init__(self,centerx,centery):
+#         frame_rects=[(52, 113, 8, 14), (4, 113, 8, 14),
+#                         (20, 113, 8, 14), (36, 113, 8, 14)]
+#         Powerup.__init__(self,centerx,centery,frame_rects)
+#         self.x_vel=2
+#         self.state='grow'
+#         self.name='coin'
+#         self.timer=0
+#
+#     def update(self,level):
+#         if self.state=='grow':
+#             self.rect.y+=self.y_vel
+#             if self.rect.bottom<self.original_y:
+#                 self.state='rest'
+#         self.current_time=pygame.time.get_ticks()
+#         if self.timer==0:
+#             self.timer=self.current_time
+#         if self.current_time-self.timer>150:
+#             self.frame_index=(self.frame_index+1)%4
+#             self.image=self.frames[self.frame_index]
+#             self.timer=self.current_time
+class Fireball(Powerup):
+    def __init__(self,centerx,centery,direction):
+        frame_rects=[(96,144,8,8),(104,144,8,8),(96,152,8,8),(104,152,8,8),#旋转
+                     (112,144,16,16),(112,160,16,16),(112,176,16,16)]#爆炸
         Powerup.__init__(self,centerx,centery,frame_rects)
-        self.x_vel=2
-        self.state='grow'
-        self.name='coin'
+        self.name='fireball'
+        self.state='fly'
+        self.direction=direction
+        self.x_vel=10 if self.direction else -10
+        self.y_vel=10
+        self.gravity=1
         self.timer=0
-
     def update(self,level):
-        if self.state=='grow':
-            self.rect.y+=self.y_vel
-            if self.rect.bottom<self.original_y:
-                self.state='rest'
         self.current_time=pygame.time.get_ticks()
-        if self.timer==0:
-            self.timer=self.current_time
-        if self.current_time-self.timer>150:
-            self.frame_index=(self.frame_index+1)%4
-            self.image=self.frames[self.frame_index]
-            self.timer=self.current_time
+        if self.state=='fly':
+            self.y_vel+=self.gravity
+            if self.current_time-self.timer>200:
+                self.frame_index=(self.frame_index+1)%4
+                self.timer=self.current_time
+                self.image=self.frames[self.frame_index]
+            self.update_position(level)
+        elif self.state=='boom':
+            if self.current_time-self.timer>50:
+                if self.frame_index<6:
+                    self.frame_index+=1
+                    self.timer=self.current_time
+                    self.image=self.frames[self.frame_index]
+                else:
+                    self.kill()
+    def update_position(self, level):
+        self.rect.x += self.x_vel
+        self.check_x_collisions(level)
+        self.rect.y += self.y_vel
+        self.check_y_collisions(level)
+
+        if self.rect.x<0 or self.rect.y>C.SCREEN_H:
+            self.kill()
+
+    def check_x_collisions(self, level):
+        check_group=pygame.sprite.Group(level.ground_item_group,level.box_group,level.brick_group)
+        sprite = pygame.sprite.spritecollideany(self, check_group)
+        if sprite:
+            self.frame_index=4
+            self.state='boom'
+            setup.SOUND.play_sound('fireball')
+        if self.name=='fireball' and self.state=='fly':
+            enemy = pygame.sprite.spritecollideany(self, level.enemy_group)
+            if enemy:
+                enemy.go_die(how='slided')
+                level.enemy_group.remove(enemy)
+                level.dying_group.add(enemy)
+                self.frame_index = 4
+                self.state = 'boom'
+                setup.SOUND.play_sound('fireball')
+
+
+    def check_y_collisions(self, level):
+        check_group = pygame.sprite.Group(level.ground_item_group, level.brick_group, level.box_group)
+        sprite = pygame.sprite.spritecollideany(self, check_group)
+        if sprite:
+            if self.rect.top < sprite.rect.top:
+                self.rect.bottom = sprite.rect.top
+                self.y_vel = -10

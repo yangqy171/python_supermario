@@ -61,7 +61,6 @@ class Box(pygame.sprite.Sprite):
             self.state='open'
 
             if self.box_type==1:
-                # 添加金币
                 from ..components.coin import Coin
                 # 确保金币被正确添加到组中
                 coin = Coin(self.rect.centerx, self.rect.centery)
