@@ -26,6 +26,10 @@ class Brick(pygame.sprite.Sprite):
         self.rect.y=self.y
         self.state='rest'
         self.gravity=C.GRAVITY
+        if brick_type==1:
+            self.coin_num=1
+        else:
+            self.coin_num=0
 
     def update(self):
         self.current_time = pygame.time.get_ticks()
@@ -52,9 +56,14 @@ class Brick(pygame.sprite.Sprite):
             self.rect.y = self.y
             if self.brick_type == 0:
                 self.state = 'rest'
-            elif self.brick_type == 1:
+            if self.brick_type == 1:
                 self.state = 'open'
-                self.group.add(create_powerup(self.rect.centerx, self.rect.centery, self.brick_type))
+                # 添加金币
+                from ..components.coin import Coin
+                # 确保金币被正确添加到组中
+                coin = Coin(self.rect.centerx, self.rect.centery)
+                self.group.add(coin)
+
             else:
                 pass
 

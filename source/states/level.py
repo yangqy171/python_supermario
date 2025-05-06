@@ -16,6 +16,7 @@ class Level:
         self.setup_start_position()
         self.setup_player()
         self.setup_ground_items()
+        self.setup_static_coins()
         self.setup_bricks_and_boxes()
         self.setup_enemies()
         self.setup_checkpoint()
@@ -52,6 +53,15 @@ class Level:
         for name in ['ground','pipe','step']:
             for item in self.map_data[name]:
                 self.ground_item_group.add(stuff.Item(item['x'],item['y'],item['width'],item['height'],name))
+                
+    def setup_static_coins(self):
+        """设置地图中的静态金币"""
+        from ..components.coin import StaticCoin
+        self.static_coin_group = pygame.sprite.Group()
+        if 'coin' in self.map_data:
+            for coin_data in self.map_data['coin']:
+                x, y = coin_data['x'], coin_data['y']
+                self.static_coin_group.add(StaticCoin(x, y))
 
     def setup_bricks_and_boxes(self):
         self.brick_group=pygame.sprite.Group()
@@ -121,8 +131,11 @@ class Level:
             self.enemy_group.update(self)
             self.dying_group.update(self)
             self.shell_group.update(self)
-            self.coin_group.update(self)
+            self.coin_group.update()
+            self.static_coin_group.update()
             self.power_up_group.update(self)
+            # 检查所有金币碰撞
+            self.check_coin_collisions()
 
         self.draw(surface)
     def is_frozen(self):
@@ -159,7 +172,10 @@ class Level:
                 self.player.go_die()
         shell= pygame.sprite.spritecollideany(self.player, self.shell_group)
         if shell:
-            if shell.state=='slide':
+            if shell.state=='slide' and self.player.big:
+                self.player.state='big2small'
+                self.player.hurt_immune=True
+            elif shell.state=='slide' and not self.player.big:
                 self.player.go_die()
             else:
                 if self.player.rect.x<shell.rect.x:
@@ -181,6 +197,7 @@ class Level:
                     self.player.state = 'small2big'
                 elif self.player.big and not self.player.fire:
                     self.player.state = 'big2fire'
+        # 金币碰撞检测已移至check_coin_collisions方法
     def check_y_collisions(self):
         ground_item=pygame.sprite.spritecollideany(self.player,self.ground_item_group)
         brick=pygame.sprite.spritecollideany(self.player,self.brick_group)
@@ -247,11 +264,14 @@ class Level:
             if sprite.name=='box':
                 if sprite.state=='rest':
                     sprite.go_bumped()
+                    self.game_info['coin'] = self.game_info.get('coin', 0) + sprite.coin_num
+                    print(sprite.coin_num)
             if sprite.name=='brick':
                 if self.player.big and sprite.brick_type==0:
                     sprite.smashed(self.dying_group)
                 else:
                     sprite.go_bumped()
+                    self.game_info['coin'] = self.game_info.get('coin', 0) + sprite.coin_num
     def is_enemy_on(self,sprite):
         sprite.rect.y-=1
         enemy=pygame.sprite.spritecollideany(sprite,self.enemy_group)
@@ -283,12 +303,14 @@ class Level:
         self.game_ground.blit(self.background,self.game_window,self.game_window)
         self.game_ground.blit(self.player.image,self.player.rect)
         self.power_up_group.draw(self.game_ground)
+        self.coin_group.draw(self.game_ground)
+        self.static_coin_group.draw(self.game_ground)
         self.brick_group.draw(self.game_ground)
         self.box_group.draw(self.game_ground)
         self.enemy_group.draw(self.game_ground)
         self.dying_group.draw(self.game_ground)
         self.shell_group.draw(self.game_ground)
-        self.coin_group.draw(self.game_ground)
+        
 
         surface.blit(self.game_ground, (0,0),self.game_window)
         self.info.draw(surface)
@@ -302,6 +324,28 @@ class Level:
     def check_if_go_die(self):
         if self.player.rect.y>C.SCREEN_H:
             self.player.go_die()
+            
+    def check_coin_collisions(self):
+        """检查玩家与所有金币的碰撞"""
+        # 检测与动态金币的碰撞
+        coin_hits = pygame.sprite.spritecollide(self.player, self.coin_group, True)
+        for coin in coin_hits:
+            if coin.name == 'coin':
+                self.game_info['coin'] = self.game_info.get('coin', 0) + 1
+                print(f'金币增加: 1, 当前总数: {self.game_info["coin"]}')
+                print(f'Debug: game_info["coin"] = {self.game_info["coin"]}')
+                # 播放金币音效
+                setup.SOUND.play_sound('coin')
+                
+        # 检测与静态金币的碰撞
+        static_coin_hits = pygame.sprite.spritecollide(self.player, self.static_coin_group, True)
+        for coin in static_coin_hits:
+            if coin.name == 'coin':
+                self.game_info['coin'] = self.game_info.get('coin', 0) + 1
+                print(f'金币增加: 1, 当前总数: {self.game_info["coin"]}')
+                print(f'Debug: game_info["coin"] = {self.game_info["coin"]}')
+                # 播放金币音效
+                setup.SOUND.play_sound('coin')
 
     def update_game_info(self):
         if self.player.dead:

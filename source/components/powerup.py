@@ -1,10 +1,9 @@
 import pygame
 from.. import tools,setup
 from.. import constants as C
-from. import coin
 def create_powerup(centerx,centery,powerup_type):
     if powerup_type==1:
-        return Coin()
+        return Coin(centerx,centery)
     elif powerup_type==4:
         return Fireflower(centerx,centery)
     elif powerup_type==3:
@@ -100,11 +99,30 @@ class Fireflower(Powerup):
             self.frame_index=(self.frame_index+1)%4
             self.image=self.frames[self.frame_index]
             self.timer=self.current_time
-class Coin(coin.FlashingCoin):
-    def __init__(self):
-        super().__init__()
 
 class LifeMushroom(Powerup):
     pass
 class Star(Powerup):
     pass
+class Coin(Powerup):
+    def __init__(self,centerx,centery):
+        frame_rects=[(52, 113, 8, 14), (4, 113, 8, 14), 
+                        (20, 113, 8, 14), (36, 113, 8, 14)]
+        Powerup.__init__(self,centerx,centery,frame_rects)
+        self.x_vel=2
+        self.state='grow'
+        self.name='coin'
+        self.timer=0
+
+    def update(self,level):
+        if self.state=='grow':
+            self.rect.y+=self.y_vel
+            if self.rect.bottom<self.original_y:
+                self.state='rest'
+        self.current_time=pygame.time.get_ticks()
+        if self.timer==0:
+            self.timer=self.current_time
+        if self.current_time-self.timer>150:
+            self.frame_index=(self.frame_index+1)%4
+            self.image=self.frames[self.frame_index]
+            self.timer=self.current_time

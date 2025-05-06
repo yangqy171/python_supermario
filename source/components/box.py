@@ -26,6 +26,10 @@ class Box(pygame.sprite.Sprite):
         self.rect.y=self.y
         self.state='rest'
         self.timer=0
+        if box_type==1:
+            self.coin_num=1
+        else:
+            self.coin_num=0
         self.gravity=C.GRAVITY
 
     def update(self):
@@ -57,7 +61,12 @@ class Box(pygame.sprite.Sprite):
             self.state='open'
 
             if self.box_type==1:
-                pass
+                # 添加金币
+                from ..components.coin import Coin
+                # 确保金币被正确添加到组中
+                coin = Coin(self.rect.centerx, self.rect.centery)
+                self.group.add(coin)
+
             else:
                 self.group.add(create_powerup(self.rect.centerx,self.rect.centery,self.box_type))
 

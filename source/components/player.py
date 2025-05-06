@@ -224,6 +224,7 @@ class Player(pygame.sprite.Sprite):
         if self.big:
             setup.SOUND.play_sound('big_jump')
         else:
+            pass
             setup.SOUND.play_sound('small_jump')
 
     def fall(self,keys):
@@ -289,6 +290,7 @@ class Player(pygame.sprite.Sprite):
         frames_and_idx=[(self.small_normal_frames,8),(self.big_normal_frames,8),(self.big_normal_frames,8)]
         if self.transition_timer==0:
             self.big=False
+            self.fire=False
             self.transition_timer=self.current_time
             self.changing_idx=0
         elif self.current_time-self.transition_timer>frame_dur:
