@@ -31,7 +31,8 @@ class Info:
         self.info_labels.append((self.create_label('MARIO'), (75, 30)))
         self.info_labels.append((self.create_label('WORLD'), (450, 30)))
         self.info_labels.append((self.create_label('TIME'), (625, 30)))
-        self.info_labels.append((self.create_label('000000'), (75, 55)))
+        score_count=self.game_info['score']
+        self.info_labels.append((self.create_label('{:06d}'.format(score_count)), (75, 55)))
         # 初始化金币计数
         coin_count = self.game_info['coin']
         self.info_labels.append((self.create_label('x{:02d}'.format(coin_count)), (300, 55)))
@@ -48,12 +49,16 @@ class Info:
         '''实时更新分数和金币'''
         self.flash_coin.update()
         
-        # 只更新金币计数标签
+        # 更新金币计数标签
         coin_count = self.game_info.get('coin', 0)
+        # 更新分数标签
+        score_count = self.game_info.get('score', 0)
+        
         for i, (label, pos) in enumerate(self.info_labels):
             if pos == (300, 55):  # 金币标签的位置
                 self.info_labels[i] = (self.create_label('x{:02d}'.format(coin_count)), pos)
-                break
+            elif pos == (75, 55):  # 分数标签的位置
+                self.info_labels[i] = (self.create_label('{:06d}'.format(score_count)), pos)
 
     def draw(self,surface):
         '''传入图层，在图层上放文字'''

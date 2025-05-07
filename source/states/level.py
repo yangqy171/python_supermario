@@ -210,6 +210,8 @@ class Level:
                     shell.rect.x-=40
                     shell.direction=0
                 shell.state='slide'
+                # 踢龟壳加40分
+                self.game_info['score'] = self.game_info.get('score', 0) + 40
         powerup=pygame.sprite.spritecollideany(self.player,self.power_up_group)
         if powerup:
             if powerup.name=='fireball':
@@ -259,11 +261,15 @@ class Level:
             self.dying_group.add(enemy)
             if self.player.y_vel<0:
                 how='bumped'
+                # 顶死敌人加200分
+                self.game_info['score'] = self.game_info.get('score', 0) + 200
             else:
                 how='trampled'
                 self.player.state='jump'
                 self.player.rect.bottom=enemy.rect.top
                 self.player.y_vel=self.player.jump_vel*0.8
+                # 踩死敌人加100分
+                self.game_info['score'] = self.game_info.get('score', 0) + 100
                 # 播放踩踏敌人音效
                 setup.SOUND.play_sound('stomp')
             enemy.go_die(how)
@@ -290,6 +296,8 @@ class Level:
                 if sprite.state=='rest':
                     sprite.go_bumped()
                     self.game_info['coin'] = self.game_info.get('coin', 0) + sprite.coin_num
+                    if sprite.coin_num>0:
+                        self.game_info['score'] = self.game_info.get('score', 0) + 100
                     print(sprite.coin_num)
             if sprite.name=='brick':
                 if self.player.big and sprite.brick_type==0:
@@ -297,6 +305,8 @@ class Level:
                 else:
                     sprite.go_bumped()
                     self.game_info['coin'] = self.game_info.get('coin', 0) + sprite.coin_num
+                    if sprite.coin_num>0:
+                        self.game_info['score'] = self.game_info.get('score', 0) + 100
     def is_enemy_on(self,sprite):
         sprite.rect.y-=1
         enemy=pygame.sprite.spritecollideany(sprite,self.enemy_group)
@@ -307,6 +317,8 @@ class Level:
                 enemy.go_die('bumped',-1)
             else:
                 enemy.go_die('bumped')
+            # 顶砖块间接杀死敌人加200分
+            self.game_info['score'] = self.game_info.get('score', 0) + 100
         sprite.rect.y+=1
 
     def check_will_fall(self,sprite):
@@ -375,7 +387,8 @@ class Level:
                 if self.flag.state == 'top':
                     self.flag.state = 'slide'
                     # 尝试播放旗杆音效，如果不存在则播放其他音效
-                    setup.SOUND.play_sound('count_down')
+                    setup.SOUND.stop_music()
+                    setup.SOUND.play_sound('one_up')
 
 
             
@@ -404,6 +417,8 @@ class Level:
     def update_game_info(self):
         if self.player.dead:
             self.game_info['lives']-=1
+            self.game_info['coin']=0
+            self.game_info['score']=0
         if self.game_info['lives']==0:
             self.next='game_over'
         else:

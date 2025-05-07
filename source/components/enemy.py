@@ -106,6 +106,8 @@ class Enemy(pygame.sprite.Sprite):
                 enemy.go_die(how='slided')
                 level.enemy_group.remove(enemy)
                 level.dying_group.add(enemy)
+                # 龟壳撞击敌人加50分
+                level.game_info['score'] = level.game_info.get('score', 0) + 50
     def check_y_collisions(self,level):
         check_group=pygame.sprite.Group(level.ground_item_group,level.brick_group,level.box_group)
         sprite=pygame.sprite.spritecollideany(self,check_group)

@@ -180,6 +180,7 @@ class Fireball(Powerup):
                 level.dying_group.add(enemy)
                 self.frame_index = 4
                 self.state = 'boom'
+                level.game_info['score'] = level.game_info.get('score', 0) + 50
                 setup.SOUND.play_sound('fireball')
 
 

@@ -123,7 +123,17 @@ class Player(pygame.sprite.Sprite):
     def handle_states(self,keys,level):
         self.can_jump_or_not(keys)
         self.can_shoot_or_not(keys)
-        if self.state=='stand':
+        if self.state=='small2big':
+            self.small2big(keys)
+        elif self.state=='big2small':
+            self.big2small(keys)
+        elif self.state=='big2fire':
+            self.big2fire(keys)
+        elif self.state=='flagpole':
+            self.flagpole()
+        elif self.state=='walk_auto':
+            self.walk_auto()
+        elif self.state=='stand':
             self.stand(keys,level)
         elif self.state=='walk':
             self.walk(keys,level)
