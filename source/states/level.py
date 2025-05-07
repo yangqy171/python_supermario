@@ -146,6 +146,7 @@ class Level:
             self.check_if_go_die()
             self.update_game_window()
             self.info.update()
+            self.power_up_group.update(self)
             self.brick_group.update()
             self.box_group.update()
             self.enemy_group.update(self)
@@ -153,7 +154,6 @@ class Level:
             self.shell_group.update(self)
             self.coin_group.update()
             self.static_coin_group.update()
-            self.power_up_group.update(self)
             self.flagpole_group.update()
             # 检查所有金币碰撞
             self.check_coin_collisions()
@@ -216,10 +216,10 @@ class Level:
         if powerup:
             if powerup.name=='fireball':
                 pass
-            if powerup.name=='mushroom':
+            elif powerup.name=='mushroom':
                 self.player.state='small2big'
                 powerup.kill()
-            if powerup.name=='fireflower':
+            elif powerup.name=='fireflower':
                 if not self.player.big:
                     self.player.state = 'small2big'
                 elif self.player.big and not self.player.fire:
@@ -274,6 +274,19 @@ class Level:
                 setup.SOUND.play_sound('stomp')
             enemy.go_die(how)
         self.check_will_fall(self.player)
+        powerup = pygame.sprite.spritecollideany(self.player, self.power_up_group)
+        if powerup:
+            if powerup.name == 'fireball':
+                pass
+            if powerup.name == 'mushroom':
+                self.player.state = 'small2big'
+                powerup.kill()
+            if powerup.name == 'fireflower':
+                if not self.player.big:
+                    self.player.state = 'small2big'
+                elif self.player.big and not self.player.fire:
+                    self.player.state = 'big2fire'
+                powerup.kill()
     def adjust_player_x(self,sprite):
         if self.player.rect.x<sprite.rect.x:
             self.player.rect.right=sprite.rect.left

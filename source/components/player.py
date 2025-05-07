@@ -143,16 +143,7 @@ class Player(pygame.sprite.Sprite):
             self.fall(keys,level)
         elif self.state=='die':
             self.die(keys)
-        elif self.state=='small2big':
-            self.small2big(keys)
-        elif self.state=='big2small':
-            self.big2small(keys)
-        elif self.state=='big2fire':
-            self.big2fire(keys)
-        elif self.state=='flagpole':
-            self.flagpole()
-        elif self.state=='walk_auto':
-            self.walk_auto()
+        else:
             pass
     
         if self.face_right:
@@ -161,7 +152,7 @@ class Player(pygame.sprite.Sprite):
             self.image=self.left_frames[self.frame_index]
 
     def can_shoot_or_not(self,keys):
-        if not keys[pygame.K_s]:
+        if not keys[pygame.K_d]:
             self.can_shoot=True
     def can_jump_or_not(self,keys):
         '''是否可以跳跃'''
@@ -181,7 +172,7 @@ class Player(pygame.sprite.Sprite):
         elif keys[pygame.K_UP] and self.can_jump:
             self.state='jump'
             self.y_vel=self.jump_vel
-        elif keys[pygame.K_s]:
+        elif keys[pygame.K_d]:
             if self.fire and self.can_shoot:
                 self.shoot_fireball(level)
 
@@ -214,7 +205,7 @@ class Player(pygame.sprite.Sprite):
                 self.x_frame_index=5
                 self.x_accel=self.turn_accel
             self.x_vel=self.calc_vel(self.x_vel,self.x_accel,self.max_x_vel,False)
-        elif keys[pygame.K_s]:
+        elif keys[pygame.K_d]:
             if self.fire and self.can_shoot:
                 self.shoot_fireball(level)
         else:
@@ -246,7 +237,7 @@ class Player(pygame.sprite.Sprite):
         elif keys[pygame.K_LEFT]:
             self.face_right=False
             self.x_vel=self.calc_vel(self.x_vel,self.x_accel,self.max_x_vel,False)
-        elif keys[pygame.K_s]:
+        elif keys[pygame.K_d]:
             if self.fire and self.can_shoot:
                 self.shoot_fireball(level)
 
@@ -269,7 +260,7 @@ class Player(pygame.sprite.Sprite):
          elif keys[pygame.K_LEFT]:
              self.face_right = False
              self.x_vel = self.calc_vel(self.x_vel, self.x_accel, self.max_x_vel, False)
-         elif keys[pygame.K_s]:
+         elif keys[pygame.K_d]:
             if self.fire and self.can_shoot:
                 self.shoot_fireball(level)
     def die(self,keys):
@@ -284,6 +275,8 @@ class Player(pygame.sprite.Sprite):
         self.death_timer=self.current_time
         # 播放死亡音效(只播放一次)
         setup.SOUND.stop_music()
+        setup.SOUND.stop_sound('small_jump')
+        setup.SOUND.stop_sound('big_jump')
         setup.SOUND.play_sound('death')
         
     def restart(self):
@@ -308,6 +301,8 @@ class Player(pygame.sprite.Sprite):
             self.transition_timer=self.current_time
             self.changing_idx=0
             # 播放变大音效
+            setup.SOUND.stop_sound('small_jump')
+            setup.SOUND.stop_sound('big_jump')
             setup.SOUND.play_sound('powerup')
         elif self.current_time-self.transition_timer>frame_dur:
                 self.transition_timer=self.current_time
@@ -328,6 +323,8 @@ class Player(pygame.sprite.Sprite):
             self.fire=False
             self.transition_timer=self.current_time
             self.changing_idx=0
+            setup.SOUND.stop_sound('small_jump')
+            setup.SOUND.stop_sound('big_jump')
             setup.SOUND.play_sound('powerup')
         elif self.current_time-self.transition_timer>frame_dur:
                 self.transition_timer=self.current_time
@@ -347,6 +344,8 @@ class Player(pygame.sprite.Sprite):
             self.fire=True
             self.transition_timer=self.current_time
             self.changing_idx=0
+            setup.SOUND.stop_sound('small_jump')
+            setup.SOUND.stop_sound('big_jump')
             setup.SOUND.play_sound('powerup')
         elif self.current_time-self.transition_timer>frame_dur:
                 self.transition_timer=self.current_time
