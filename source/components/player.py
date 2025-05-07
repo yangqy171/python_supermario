@@ -32,6 +32,7 @@ class Player(pygame.sprite.Sprite):
         self.hurt_immune=False
         self.fire=False
         self.can_shoot=True
+        self.flag_sliding_complete=False  # 添加旗杆滑动完成标志
 
     def setup_timers(self):
         '''创建一系列计时器'''
@@ -138,7 +139,12 @@ class Player(pygame.sprite.Sprite):
             self.big2small(keys)
         elif self.state=='big2fire':
             self.big2fire(keys)
-
+        elif self.state=='flagpole':
+            self.flagpole()
+        elif self.state=='walk_auto':
+            self.walk_auto()
+            pass
+    
         if self.face_right:
             self.image=self.right_frames[self.frame_index]
         else:
@@ -383,3 +389,33 @@ class Player(pygame.sprite.Sprite):
         fireball=powerup.Fireball(self.rect.centerx,self.rect.centery,self.face_right)
         level.power_up_group.add(fireball)
         self.can_shoot=False
+
+    def flagpole(self):
+        """旗杆状态处理"""
+        self.frame_index = 10  # 使用合适的帧索引，表示抓住旗杆的姿势
+        self.x_vel = 0
+        
+        # 让玩家沿着旗杆下滑
+        if self.rect.bottom < 493:  # 到达地面前继续下滑
+            self.y_vel = 5
+        else:
+            self.y_vel = 0
+            self.rect.bottom = 493  # 确保玩家站在地面上
+            # 完成旗杆下滑后，切换到自动行走状态
+            if not self.flag_sliding_complete:
+                self.flag_sliding_complete = True
+                self.state = 'walk_auto'
+                self.x_vel = 3  # 向右自动行走
+        
+        # 确保玩家面向右侧
+        self.face_right = True
+
+    def walk_auto(self):
+        """自动行走状态处理"""
+        # 自动行走动画
+        if self.current_time - self.walking_timer > self.calc_frame_duration():
+            if self.frame_index < 3:
+                self.frame_index += 1
+            else:
+                self.frame_index = 1
+            self.walking_timer = self.current_time

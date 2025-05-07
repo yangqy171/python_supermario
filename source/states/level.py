@@ -20,6 +20,7 @@ class Level:
         self.setup_bricks_and_boxes()
         self.setup_enemies()
         self.setup_checkpoint()
+        self.setup_flagpole()  # 添加旗杆设置
 
     def load_map_data(self):
         file_name='level_1.json'
@@ -90,7 +91,26 @@ class Level:
                     self.box_group.add(box.Box(x,y,box_type,self.coin_group))
                 else:
                     self.box_group.add(box.Box(x,y,box_type,self.power_up_group))
-
+    def setup_flagpole(self):
+        """设置旗杆和旗子，从JSON数据中读取"""
+        self.flagpole_group = pygame.sprite.Group()
+        
+        # 从地图数据中读取旗杆信息
+        if 'flagpole' in self.map_data:
+            for data in self.map_data['flagpole']:
+                # 根据type类型创建不同的旗杆部件
+                if data['type'] == 0:  # 旗杆顶部
+                    sprite = stuff.Flagpole(data['x'], data['y'], 10, 10, 'flagpole_top')
+                    sprite.image.fill((100, 100, 100))  # 灰色旗杆顶部
+                elif data['type'] == 1:  # 旗杆杆身
+                    sprite = stuff.Flagpole(data['x'], data['y'], 10, 40, 'flagpole_pole')
+                    sprite.image.fill((100, 100, 100))  # 灰色旗杆
+                elif data['type'] == 2:  # 旗子
+                    sprite = stuff.Flag(data['x'], data['y'])
+                    self.flag = sprite  # 保存旗子引用，用于动画
+                
+                self.flagpole_group.add(sprite)
+        
     def setup_enemies(self):
         self.dying_group=pygame.sprite.Group()
         self.shell_group=pygame.sprite.Group()
@@ -134,8 +154,11 @@ class Level:
             self.coin_group.update()
             self.static_coin_group.update()
             self.power_up_group.update(self)
+            self.flagpole_group.update()
             # 检查所有金币碰撞
             self.check_coin_collisions()
+            # 检查旗杆碰撞
+            self.check_flagpole_collisions()
 
         self.draw(surface)
     def is_frozen(self):
@@ -312,6 +335,7 @@ class Level:
         self.enemy_group.draw(self.game_ground)
         self.dying_group.draw(self.game_ground)
         self.shell_group.draw(self.game_ground)
+        self.flagpole_group.draw(self.game_ground)
         
 
         surface.blit(self.game_ground, (0,0),self.game_window)
@@ -326,6 +350,34 @@ class Level:
     def check_if_go_die(self):
         if self.player.rect.y>C.SCREEN_H:
             self.player.go_die()
+            
+    def check_flagpole_collisions(self):
+        """检查玩家与旗杆的碰撞"""
+        # 只有当玩家不处于死亡或变身状态时才检查
+        if self.player.dead or self.is_frozen():
+            return
+        # 检查与旗杆组的碰撞
+        flagpole_hit = pygame.sprite.spritecollideany(self.player, self.flagpole_group)
+        if flagpole_hit:
+            # 如果玩家碰到了旗杆，设置玩家状态为旗杆状态
+            #if self.player.state=='walk_auto':
+                #return
+            # 新增：如果已经完成滑旗，不再切换状态
+            if getattr(self.player, 'flag_sliding_complete', False):
+                return
+            elif self.player.state != 'flagpole':
+                self.player.state = 'flagpole'
+                # 停止玩家移动
+                self.player.x_vel = 0
+                # 调整玩家位置到旗杆上
+                self.player.rect.x = flagpole_hit.rect.x - 10
+                # 如果有旗子，开始旗子下滑动画
+                if self.flag.state == 'top':
+                    self.flag.state = 'slide'
+                    # 尝试播放旗杆音效，如果不存在则播放其他音效
+                    setup.SOUND.play_sound('count_down')
+
+
             
     def check_coin_collisions(self):
         """检查玩家与所有金币的碰撞"""
