@@ -119,6 +119,8 @@ class Enemy(pygame.sprite.Sprite):
         level.check_will_fall(self)
 
     def go_die(self,how,direction=1):
+        if not hasattr(self, 'current_time'):
+            self.current_time = pygame.time.get_ticks()
         self.death_timer=self.current_time
         if how in ['bumped','slided']:
             self.x_vel=C.ENEMY_SPEED*direction

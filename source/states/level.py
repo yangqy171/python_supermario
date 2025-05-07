@@ -278,10 +278,10 @@ class Level:
         if powerup:
             if powerup.name == 'fireball':
                 pass
-            if powerup.name == 'mushroom':
+            elif powerup.name == 'mushroom':
                 self.player.state = 'small2big'
                 powerup.kill()
-            if powerup.name == 'fireflower':
+            elif powerup.name == 'fireflower':
                 if not self.player.big:
                     self.player.state = 'small2big'
                 elif self.player.big and not self.player.fire:
