@@ -33,6 +33,7 @@ class Player(pygame.sprite.Sprite):
         self.fire=False
         self.can_shoot=True
         self.flag_sliding_complete=False  # 添加旗杆滑动完成标志
+        self._was_big2fire = False  # 添加big2fire变身过程标志
 
     def setup_timers(self):
         '''创建一系列计时器'''
@@ -119,10 +120,20 @@ class Player(pygame.sprite.Sprite):
         self.current_time=pygame.time.get_ticks()
         self.handle_states(keys,level)
         self.is_hurt_immune()
+        
+        # 添加额外检查，确保big2fire变身后fire属性正确设置
+        if self.state == 'walk' and self.big and not self.fire and hasattr(self, '_was_big2fire') and self._was_big2fire:
+            print('检测到big2fire变身后fire属性未正确设置，手动修正')
+            self.fire = True
+            self._was_big2fire = False
 
     def handle_states(self,keys,level):
         self.can_jump_or_not(keys)
         self.can_shoot_or_not(keys)
+        # 添加调试输出，跟踪状态变化
+        if self.state == 'big2fire':
+            print(f'当前状态: big2fire, fire={self.fire}, transition_timer={self.transition_timer}')
+            
         if self.state=='small2big':
             self.small2big(keys)
         elif self.state=='big2small':
@@ -341,22 +352,33 @@ class Player(pygame.sprite.Sprite):
         sizes=[0,1,0,1,0,1,0,1,0,1,0]
         frames_and_idx=[(self.big_fire_frames,3),(self.big_normal_frames,3)]
         if self.transition_timer==0:
+            print('开始big2fire变身过程')
+            # 确保在变身开始时就设置fire属性
             self.fire=True
+            # 设置标志，表示正在进行big2fire变身
+            self._was_big2fire = True
             self.transition_timer=self.current_time
             self.changing_idx=0
             setup.SOUND.stop_sound('small_jump')
             setup.SOUND.stop_sound('big_jump')
             setup.SOUND.play_sound('powerup')
         elif self.current_time-self.transition_timer>frame_dur:
-                self.transition_timer=self.current_time
-                frames,idx=frames_and_idx[sizes[self.changing_idx]]
-                self.change_player_image(frames,idx)
-                self.changing_idx+=1
-                if self.changing_idx==len(sizes):
-                    self.transition_timer=0
-                    self.state='walk'
-                    self.right_frames=self.right_big_fire_frames
-                    self.left_frames=self.left_big_fire_frames
+            # 修复缩进问题，确保代码块正确执行
+            self.transition_timer=self.current_time
+            frames,idx=frames_and_idx[sizes[self.changing_idx]]
+            self.change_player_image(frames,idx)
+            self.changing_idx+=1
+            print(f'big2fire变身进度: {self.changing_idx}/{len(sizes)}')
+            if self.changing_idx==len(sizes):
+                # 确保变身完成时重置计时器并设置正确的状态和帧
+                self.transition_timer=0
+                self.state='walk'
+                # 确保使用火焰马里奥的帧
+                self.right_frames=self.right_big_fire_frames
+                self.left_frames=self.left_big_fire_frames
+                # 再次确认fire属性已设置为True
+                self.fire=True
+                print('big2fire变身完成，状态已设为walk，fire={}'.format(self.fire))
     def change_player_image(self,frames,idx):
         self.frame_index=idx
         if self.face_right:

@@ -162,7 +162,9 @@ class Level:
 
         self.draw(surface)
     def is_frozen(self):
-        return self.player.state in ['small2big','big2small','big2fire','fire2small']
+        # 检查玩家是否处于变身状态，此时游戏应该暂停其他更新
+        frozen = self.player.state in ['small2big','big2small','big2fire','fire2small']
+        return frozen
 
 
     def update_player_position(self):
@@ -222,9 +224,14 @@ class Level:
             elif powerup.name=='fireflower':
                 if not self.player.big:
                     self.player.state = 'small2big'
+                    print('碰到fireflower: 设置状态为small2big')
                 elif self.player.big and not self.player.fire:
+                    # 确保在设置状态前重置transition_timer
+                    self.player.transition_timer = 0
                     self.player.state = 'big2fire'
+                    print('碰到fireflower: 设置状态为big2fire')
                 powerup.kill()
+                print(f'fireflower已移除，玩家状态: {self.player.state}, big={self.player.big}, fire={self.player.fire}')
     def check_y_collisions(self):
         ground_item=pygame.sprite.spritecollideany(self.player,self.ground_item_group)
         brick=pygame.sprite.spritecollideany(self.player,self.brick_group)
@@ -274,19 +281,9 @@ class Level:
                 setup.SOUND.play_sound('stomp')
             enemy.go_die(how)
         self.check_will_fall(self.player)
-        powerup = pygame.sprite.spritecollideany(self.player, self.power_up_group)
-        if powerup:
-            if powerup.name == 'fireball':
-                pass
-            elif powerup.name == 'mushroom':
-                self.player.state = 'small2big'
-                powerup.kill()
-            elif powerup.name == 'fireflower':
-                if not self.player.big:
-                    self.player.state = 'small2big'
-                elif self.player.big and not self.player.fire:
-                    self.player.state = 'big2fire'
-                powerup.kill()
+        # 移除此处的powerup碰撞检测，统一在check_x_collisions中处理
+        # 这样可以避免重复触发状态变化
+        pass
     def adjust_player_x(self,sprite):
         if self.player.rect.x<sprite.rect.x:
             self.player.rect.right=sprite.rect.left
@@ -396,6 +393,22 @@ class Level:
                 self.player.x_vel = 0
                 # 调整玩家位置到旗杆上
                 self.player.rect.x = flagpole_hit.rect.x - 10
+                
+                # 根据玩家在旗杆上的高度计算得分
+                # 旗杆顶部位置约为y=97，底部约为y=485
+                flagpole_height = 485 - 97
+                player_height = self.player.rect.y - 97
+                # 计算得分：越高得分越多，最高100分，最低10分，在碰撞过程累积加分
+                if player_height <= 0:  # 玩家在旗杆顶部或更高
+                    score = 100
+                else:
+                    # 根据高度比例计算分数
+                    height_ratio = player_height / flagpole_height
+                    score = max(10, int(100 - height_ratio * 90))
+                
+                # 更新游戏分数
+                self.game_info['score'] = self.game_info.get('score', 0) + score
+                
                 # 如果有旗子，开始旗子下滑动画
                 if self.flag.state == 'top':
                     self.flag.state = 'slide'
