@@ -63,9 +63,8 @@ class Brick(pygame.sprite.Sprite):
                 # 确保金币被正确添加到组中
                 coin = Coin(self.rect.centerx, self.rect.centery)
                 self.group.add(coin)
-
             else:
-                pass
+                self.state = 'rest'
 
 
     def open(self):

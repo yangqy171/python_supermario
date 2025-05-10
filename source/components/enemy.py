@@ -2,18 +2,7 @@ import pygame
 from .. import tools,setup
 from .. import constants as C
 
-def create_enemy(enemy_data):
-    enemy_type=enemy_data['type']
-    x,y_bottom,direction,color=enemy_data['x'],enemy_data['y'],enemy_data['direction'],enemy_data['color']
-    if enemy_type==0:#Goomba蘑菇怪
-        enemy=Goomba(x,y_bottom,direction,'goomba',color)
-    elif enemy_type==1:#乌龟
-        enemy=Koopa(x,y_bottom,direction,'koopa',color)
-    else:
-        # 处理未知敌人类型，默认创建Goomba
-        print(f"警告：未知敌人类型 {enemy_type}，默认创建Goomba")
-        enemy=Goomba(x,y_bottom,direction,'goomba',color)
-    return enemy
+
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self,x,y_bottom,direction,name,frame_rects):
@@ -169,3 +158,131 @@ class Koopa(Enemy):
             self.shell_timer=0
     def slide(self):
         pass
+class Piranha(Enemy):
+    def __init__(self, x, y_bottom, direction, color, in_range, range_start, range_end, name="Piranha"):
+        frame_rect_list = self.get_frame_rect(color)
+        Enemy.__init__(self, x, y_bottom, direction, name, frame_rect_list)
+
+        self.in_range = in_range
+        self.range_start = range_start  # Top Y position (e.g., fully emerged)
+        self.range_end = range_end    # Bottom Y position (e.g., fully hidden in pipe)
+        
+        self.rect.bottom = self.range_end # Ensure Piranha starts at the bottom of its range
+        
+        # States: 'PIRANHA_REVEALING', 'PIRANHA_NORMAL', 'PIRANHA_HIDING', 'PIRANHA_HIDDEN'
+        # These should ideally be constants in C (e.g., C.PIRANHA_REVEALING)
+        self.state = C.PIRANHA_REVEALING # Start by moving up
+        self.y_vel = -1  # Move up
+        self.wait_timer = 0  # Timer for waiting in HIDDEN or NORMAL state
+        self.animate_timer = 0 # Timer for mouth animation
+
+        # Durations for states (in milliseconds)
+        self.hidden_duration = 3000  # Time to wait in HIDDEN state
+        self.normal_duration = 2000  # Time to stay in NORMAL state
+
+    def get_frame_rect(self, color):
+        if color == C.COLOR_TYPE_GREEN:
+            frame_rect_list = [(192, 8, 16, 24), (208, 8, 16, 24)]
+        else:
+            frame_rect_list = [(192, 72, 16, 24), (208, 72, 16, 24)]
+        return frame_rect_list
+
+    def animate_mouth(self):
+        if (self.current_time - self.animate_timer) > 250: # Animation speed
+            if self.frame_index == 0:
+                self.frame_index = 1
+            else: # self.frame_index == 1
+                self.frame_index = 0
+            self.animate_timer = self.current_time
+
+    def update_position(self, level):
+        # Movement is driven by y_vel set in handle_states
+        self.rect.y += self.y_vel
+
+        # Boundary checks to ensure Piranha stays within its range
+        # These are secondary to state logic which should prevent overshooting
+        if self.state == C.PIRANHA_REVEALING and self.rect.y < self.range_start:
+            self.rect.y = self.range_start
+        elif self.state == C.PIRANHA_HIDING and self.rect.bottom > self.range_end:
+            self.rect.bottom = self.range_end
+        # No x-movement or general y-collisions for Piranha plant in pipe
+
+    def check_player_is_on(self, level):
+        result = False
+        original_y = self.rect.y
+        self.rect.y -= 5
+        if hasattr(level, 'player'):
+            temp_group = pygame.sprite.Group()
+            temp_group.add(self)
+            if pygame.sprite.spritecollideany(level.player, temp_group):
+                result = True
+        self.rect.y = original_y
+        return result
+
+    def start_death_jump(self, direction):
+        self.kill()
+
+    def handle_states(self, level):
+        player_too_close = False
+        player_on_top = self.check_player_is_on(level)
+
+        if hasattr(level, 'player') and level.player is not None:
+            if abs(self.rect.centerx - level.player.rect.centerx) < 1: # Player proximity check (adjust as needed)
+                player_too_close = True
+        
+        # Priority: If player is close or on top, Piranha tries to hide or stay hidden.
+        if player_too_close or player_on_top:
+            if self.state in [C.PIRANHA_REVEALING, C.PIRANHA_NORMAL]:
+                self.state = C.PIRANHA_HIDING
+                self.y_vel = 1  # Move down
+            elif self.state == C.PIRANHA_HIDDEN:
+                # If already hidden and player is close, reset wait timer to stay hidden longer
+                self.wait_timer = self.current_time
+            # If C.PIRANHA_HIDING, it will continue to hide.
+
+        # State machine logic
+        if self.state == C.PIRANHA_HIDDEN:
+            if self.wait_timer == 0: # Initialize wait_timer if not set (e.g. first update)
+                self.wait_timer = self.current_time
+            if (self.current_time - self.wait_timer) > self.hidden_duration and not (player_too_close or player_on_top):
+                self.state = C.PIRANHA_REVEALING
+                self.y_vel = -1  # Move up
+        elif self.state == C.PIRANHA_REVEALING:
+            self.animate_mouth() # Animate while revealing
+            if self.rect.y <= self.range_start:
+                self.rect.y = self.range_start
+                self.state = C.PIRANHA_NORMAL
+                self.y_vel = 0
+                self.wait_timer = self.current_time # Start timer for NORMAL duration
+        elif self.state == C.PIRANHA_NORMAL:
+            self.animate_mouth() # Animate while in NORMAL state
+            if (self.current_time - self.wait_timer) > self.normal_duration and not (player_too_close or player_on_top):
+                self.state = C.PIRANHA_HIDING
+                self.y_vel = 1  # Move down
+        elif self.state == C.PIRANHA_HIDING:
+            self.animate_mouth() # Animate while hiding
+            if self.rect.bottom >= self.range_end:
+                self.rect.bottom = self.range_end
+                self.state = C.PIRANHA_HIDDEN
+                self.y_vel = 0
+                self.wait_timer = self.current_time # Start timer for HIDDEN duration
+
+        # Update image - Piranha animation is not directional
+        self.image = self.left_frames[self.frame_index]
+
+def create_enemy(enemy_data):
+    enemy_type=enemy_data['type']
+    x,y_bottom,direction,color=enemy_data['x'],enemy_data['y'],enemy_data['direction'],enemy_data['color']
+    if enemy_type==0:#Goomba蘑菇怪
+        enemy=Goomba(x,y_bottom,direction,'goomba',color)
+    elif enemy_type==1:#乌龟
+        enemy=Koopa(x,y_bottom,direction,'koopa',color)
+    elif enemy_type==3: # Piranha
+        in_range = enemy_data.get('in_range', False)
+        range_start = enemy_data.get('range_start', y_bottom - 100)
+        range_end = enemy_data.get('range_end', y_bottom)
+        enemy=Piranha(x,y_bottom,direction,color,in_range,range_start,range_end)
+    else:
+        print(f"警告：未知敌人类型 {enemy_type}，默认创建Goomba")
+        enemy=Goomba(x,y_bottom,direction,'goomba',color)
+    return enemy

@@ -28,6 +28,7 @@ class Level:
         self.setup_enemies()
         self.setup_checkpoint()
         self.setup_flagpole()  # 添加旗杆设置
+        self.active_enemy_groups = set() # 初始化已激活的敌人组集合
 
     def load_map_data(self):
         # 根据游戏信息中的关卡编号加载对应地图
@@ -391,6 +392,9 @@ class Level:
         elif enemy:
             if self.player.hurt_immune:
                 return
+            if enemy.name=='Piranha':
+                self.player.go_die()
+                return
             self.enemy_group.remove(enemy)
             if enemy.name=='koopa':
                 self.shell_group.add(enemy)
@@ -486,21 +490,60 @@ class Level:
         self.static_coin_group.draw(self.game_ground)
         self.brick_group.draw(self.game_ground)
         self.box_group.draw(self.game_ground)
-        self.enemy_group.draw(self.game_ground)
+
         self.dying_group.draw(self.game_ground)
         self.shell_group.draw(self.game_ground)
         self.flagpole_group.draw(self.game_ground)
-        
+        self.enemy_group.draw(self.game_ground)
 
         surface.blit(self.game_ground, (0,0),self.game_window)
         self.info.draw(surface)
     def check_checkpoints(self):
-        checkpoints = pygame.sprite.spritecollide(self.player, self.checkpoint_group, False)
-        if checkpoints:
-            for checkpoint in checkpoints:
-                if checkpoint.checkpoint_type == 0:
-                    self.enemy_group.add(self.enemy_group_dict[str(checkpoint.enemy_groupid)])
-                checkpoint.kill()
+        collided_checkpoints = pygame.sprite.spritecollide(self.player, self.checkpoint_group, False) # dokill=False, manual kill later
+
+        for checkpoint in collided_checkpoints:
+            group_id_attr = getattr(checkpoint, 'enemy_groupid', None) # Safely get enemy_groupid
+            # Basic log for any checkpoint collision
+            print(f"DEBUG: Player collided with checkpoint: type={checkpoint.checkpoint_type}, original enemy_groupid='{group_id_attr}' at pos ({checkpoint.rect.x}, {checkpoint.rect.y})")
+
+            if checkpoint.checkpoint_type == 0:  # Assuming 0 is for activating enemies
+                if group_id_attr is None:
+                    print(f"DEBUG: Checkpoint (type 0) is missing 'enemy_groupid' attribute.")
+                    checkpoint.kill() # Kill misconfigured checkpoint
+                    continue
+
+                group_id_str = str(group_id_attr)
+
+                if group_id_str in self.active_enemy_groups:
+                    print(f"DEBUG: Enemy group '{group_id_str}' already activated. Skipping.")
+                elif group_id_str in self.enemy_group_dict:
+                    enemy_sub_group = self.enemy_group_dict[group_id_str]
+                    self.enemy_group.add(enemy_sub_group.sprites())  # Add individual sprites from the sub-group
+                    self.active_enemy_groups.add(group_id_str) # Mark as activated
+                    print(f"DEBUG: Activated enemy group ID '{group_id_str}'. Added {len(enemy_sub_group.sprites())} enemies to self.enemy_group.")
+                    
+                    # Detailed logging for each enemy in the activated group
+                    for i, enemy_sprite in enumerate(enemy_sub_group.sprites()):
+                        enemy_name = getattr(enemy_sprite, 'name', 'UnknownName')
+                        # Try to get 'type' as well, as it might be more specific for piranhas
+                        enemy_type_attr = getattr(enemy_sprite, 'type', 'UnknownType') 
+                        print(f"DEBUG:   - Enemy {i+1}/{len(enemy_sub_group.sprites())}: Name='{enemy_name}', Type='{enemy_type_attr}', Pos=({enemy_sprite.rect.x},{enemy_sprite.rect.y})")
+                        # Check name or type for 'piranha'
+                        is_piranha = False
+                        if 'piranha' in enemy_name.lower():
+                            is_piranha = True
+                        elif isinstance(enemy_type_attr, str) and 'piranha' in enemy_type_attr.lower():
+                            is_piranha = True
+                        
+                        if is_piranha:
+                            print(f"DEBUG:     >>>> Piranha plant '{enemy_name}' (Type: '{enemy_type_attr}') from group '{group_id_str}' is now in self.enemy_group.")
+                else:
+                    print(f"DEBUG: Error: Enemy group ID '{group_id_str}' (from checkpoint) not found in self.enemy_group_dict.")
+                    print(f"DEBUG:   Available enemy_group_dict keys: {list(self.enemy_group_dict.keys())}")
+            else:
+                print(f"DEBUG: Checkpoint type is {checkpoint.checkpoint_type}, not an enemy activation checkpoint (type 0).")
+            
+            checkpoint.kill() # Kill the checkpoint after processing, as in original code
     def check_if_go_die(self):
         if self.player.rect.y>C.SCREEN_H:
             self.player.go_die()
@@ -522,6 +565,7 @@ class Level:
                 setup.SOUND.play_music('flagpole')
                 # 让玩家向右走向城堡
                 self.player.state = 'walk_auto'
+                self.player.hurt_immune = True # Make player immune during walk to castle
                 self.player.x_vel = 1
                 self.player.facing_right = True
             elif self.current_time - self.castle_timer > 3000:
@@ -538,6 +582,7 @@ class Level:
                 return
             elif self.player.state != 'flagpole':
                 self.player.state = 'flagpole'
+                self.player.hurt_immune = True # Make player immune during flagpole slide
                 # 停止玩家移动
                 self.player.x_vel = 0
                 # 调整玩家位置到旗杆上
@@ -583,37 +628,42 @@ class Level:
         for coin in static_coin_hits:
             if coin.name == 'coin':
                 self.game_info['coin'] = self.game_info.get('coin', 0) + 1
+                self.game_info['score'] = self.game_info.get('score', 0) + 100
                 print(f'金币增加: 1, 当前总数: {self.game_info["coin"]}')
                 print(f'Debug: game_info["coin"] = {self.game_info["coin"]}')
                 # 播放金币音效
                 setup.SOUND.play_sound('coin')
 
     def update_game_info(self):
-        if self.player.dead:
-            self.game_info['lives']-=1
-            # 只在游戏结束时重置金币和分数
+        if self.flag_pole_complete:
+            # 玩家通过旗杆完成关卡
+            current_level = self.game_info.get('level_num', 1)
+            next_level = current_level + 1
+            self.game_info['level_num'] = next_level
+            print(f'关卡完成！进入第{next_level}关')
+            self.game_info['score'] += 1000  # 完成关卡奖励1000分
+            
+            # 即使玩家在自动走向城堡的过程中“死亡”（例如掉入坑中），
+            # 这仍然算作关卡完成，不应扣减生命。
+            # self.finished 标志已在 check_flagpole_collisions 中设置。
+            self.next = 'load_screen'  # 设置状态以加载下一关
+            setup.SOUND.stop_music()
+            setup.SOUND.play_music('main_theme')
+        elif self.player.dead:
+            # 玩家正常死亡（非旗杆完成过程中的意外）
+            self.game_info['lives'] -= 1
             if self.game_info['lives'] == 0:
                 self.game_info['coin'] = 0
                 self.game_info['score'] = 0
-        elif self.flag_pole_complete:
-            # 玩家完成当前关卡，进入下一关
-            current_level = self.game_info.get('level_num', 1)
-            next_level = current_level + 1
-            
-            # 特殊处理：如果当前是第二关，下一关应该是第四关（跳过第三关）
-            if current_level == 2:
-                next_level = 4
-                print(f'从第二关直接跳转到第四关')
-            
-            self.game_info['level_num'] = next_level
-            print(f'关卡完成！进入第{next_level}关')
-            
-            # 可以在这里添加关卡奖励
-            self.game_info['score'] += 1000  # 完成关卡奖励1000分
-            
-        # 根据生命值决定下一个状态
-        if self.game_info['lives'] == 0:
-            self.next = 'game_over'
+                self.next = 'game_over'
+            else:
+                self.next = 'load_screen'  # 重新加载当前关卡
         else:
-            self.next = 'load_screen'
+            # 此情况理论上不应发生，因为 update_game_info 主要由 player.dead 
+            # 或 flag_pole_complete (导致 self.finished) 触发。
+            # 为安全起见，根据生命值设置下一个状态。
+            if self.game_info.get('lives', 0) > 0:
+                self.next = 'load_screen'
+            else:
+                self.next = 'game_over'
 
