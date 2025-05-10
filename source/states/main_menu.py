@@ -9,7 +9,7 @@ class MainMenu:
         game_info={
             'score':0,
             'coin':0,
-            'lives':3,
+            'lives':1000,
             'player_state':'small'
         }
         self.start(game_info)
@@ -71,7 +71,8 @@ class MainMenu:
             {
                 'score':0,
                 'coin':0,
-                'lives':3,
-                'player_state':'small'
+                'lives':1000,
+                'player_state':'small',
+                'level_num':1
             }
         )

@@ -19,7 +19,9 @@ class Player(pygame.sprite.Sprite):
     def load_data(self):
         '''载入数据'''
         file_name=self.name+'.json'
-        file_path=os.path.join('source/data/player',file_name)
+        # 使用相对于当前脚本的路径
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        file_path=os.path.join(current_dir, 'data', 'player', file_name)
         with open(file_path) as f:
             self.player_data=json.load(f)
     def setup_states(self):
@@ -263,15 +265,15 @@ class Player(pygame.sprite.Sprite):
             setup.SOUND.play_sound('small_jump')
 
     def fall(self,keys,level):
-         self.y_vel=self.calc_vel(self.y_vel,self.gravity,self.max_y_vel)
+        self.y_vel=self.calc_vel(self.y_vel,self.gravity,self.max_y_vel)
         #TODO workaround,will move to level for collision detection
-         if keys[pygame.K_RIGHT]:
-             self.face_right = True
-             self.x_vel = self.calc_vel(self.x_vel, self.x_accel, self.max_x_vel, True)
-         elif keys[pygame.K_LEFT]:
-             self.face_right = False
-             self.x_vel = self.calc_vel(self.x_vel, self.x_accel, self.max_x_vel, False)
-         elif keys[pygame.K_d]:
+        if keys[pygame.K_RIGHT]:
+            self.face_right = True
+            self.x_vel = self.calc_vel(self.x_vel, self.x_accel, self.max_x_vel, True)
+        elif keys[pygame.K_LEFT]:
+            self.face_right = False
+            self.x_vel = self.calc_vel(self.x_vel, self.x_accel, self.max_x_vel, False)
+        elif keys[pygame.K_d]:
             if self.fire and self.can_shoot:
                 self.shoot_fireball(level)
     def die(self,keys):
@@ -450,3 +452,22 @@ class Player(pygame.sprite.Sprite):
             else:
                 self.frame_index = 1
             self.walking_timer = self.current_time
+        
+        # 确保玩家面向右侧
+        self.face_right = True
+        
+    def setup_state_dict(self):
+        self.state_dict={'stand':self.stand,
+                         'walk':self.walk,
+                         'jump':self.jump,
+                         'fall':self.fall,
+                         'die':self.die,
+                         'small2big':self.small2big,
+                         'big2small':self.big2small,
+                         'big2fire':self.big2fire,
+                         'flagpole':self.flagpole,
+                         'walk_auto':self.walk_auto}
+                          
+    def get_state_function(self):
+        return self.state_dict[self.state]
+

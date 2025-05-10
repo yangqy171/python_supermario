@@ -21,7 +21,8 @@ class Info:
             self.state_labels.append((self.create_label('000000'),(400,465)))
         elif self.state=='load_screen':
             self.state_labels.append((self.create_label('WORLD'),(280,200)))
-            self.state_labels.append((self.create_label('1 - 1'),(430,200)))
+            level_num = self.game_info.get('level_num', 1)
+            self.state_labels.append((self.create_label(f'1 - {level_num}'),(430,200)))
             self.state_labels.append((self.create_label('X   {}'.format(self.game_info['lives'])),(380,280)))
             self.player_image = tools.get_image(setup.GRAPHICS['mario_bros'], 178, 32, 12, 16, (0, 0, 0), C.BG_MULTI)
         elif self.state=='game_over':
@@ -36,7 +37,9 @@ class Info:
         # 初始化金币计数
         coin_count = self.game_info['coin']
         self.info_labels.append((self.create_label('x{:02d}'.format(coin_count)), (300, 55)))
-        self.info_labels.append((self.create_label('1 - 1'), (480, 55)))
+        # 显示当前关卡编号
+        level_num = self.game_info.get('level_num', 1)
+        self.info_labels.append((self.create_label(f'1 - {level_num}'), (480, 55)))
 
     def create_label(self,label,size=40,width_scale=1.25,height_scale=1):
         '''传入文字和大小并渲染成文字'''

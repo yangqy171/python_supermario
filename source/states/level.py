@@ -2,7 +2,7 @@ from ..components import info
 import pygame
 from .. import setup,tools
 from.. import constants as C
-from ..components import player,stuff,brick,box,enemy
+from ..components import player,stuff,brick,box,enemy,info
 import json,os
 
 class Level:
@@ -10,6 +10,13 @@ class Level:
         self.game_info=game_info
         self.finished = False
         self.next = 'game_over'
+        # 确保游戏信息中包含必要的数据
+        if 'level_num' not in self.game_info:
+            self.game_info['level_num'] = 1
+        
+        self.flag_pole_complete = False  # 标记是否完成旗杆滑动
+        self.castle_timer = 0  # 城堡计时器
+        
         self.load_map_data()
         self.info = info.Info('level',self.game_info)
         self.setup_background()
@@ -23,10 +30,75 @@ class Level:
         self.setup_flagpole()  # 添加旗杆设置
 
     def load_map_data(self):
-        file_name='level_1.json'
-        file_path=os.path.join('source/data/maps',file_name)
-        with open(file_path,'r') as f:
-            self.map_data=json.load(f)
+        # 根据游戏信息中的关卡编号加载对应地图
+        level_num = self.game_info.get('level_num', 1)
+        file_name = f'level_{level_num}.json'
+        
+        # 尝试多个可能的路径
+        paths_to_try = [
+            # 1. 相对于当前脚本的路径
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'maps', file_name),
+            # 2. 相对于项目根目录的路径
+            os.path.join('SuperMario', 'source', 'data', 'maps', file_name),
+            # 3. 相对于游戏目录的路径
+            os.path.join('game', 'SuperMario', 'source', 'data', 'maps', file_name),
+            # 4. 尝试使用PySuperMario的地图
+            os.path.join('PySuperMario', 'source', 'data', 'maps', file_name)
+        ]
+        
+        # 初始化默认地图数据
+        self.map_data = {
+            'image_name': 'level_1',
+            'maps': [
+                {'start_x': 0, 'end_x': 9086, 'player_x': 110, 'player_y': 538}
+            ],
+            'ground': [],
+            'pipe': [],
+            'step': [],
+            'brick': [],
+            'box': [],
+            'enemy': [],
+            'checkpoint': [],
+            'flagpole': []
+        }
+        
+        # 尝试加载地图数据
+        for path in paths_to_try:
+            print(f'尝试加载地图文件: {path}')
+            if os.path.exists(path):
+                try:
+                    with open(path, 'r') as f:
+                        loaded_data = json.load(f)
+                        print(f'成功加载地图数据，键: {list(loaded_data.keys())}')
+                        
+                        # 处理第三关特殊情况，如果缺少maps键但有其他必要数据
+                        if 'maps' not in loaded_data and level_num == 3:
+                            print(f'第三关缺少maps键，添加默认maps数据')
+                            loaded_data['maps'] = [
+                                {'start_x': 0, 'end_x': 7000, 'player_x': 110, 'player_y': 538}
+                            ]
+                            self.map_data = loaded_data
+                            print(f'使用修正后的地图文件: {path}')
+                            break
+                        # 正常情况下检查maps键
+                        elif 'maps' in loaded_data:
+                            self.map_data = loaded_data
+                            print(f'使用地图文件: {path}')
+                            break
+                        else:
+                            print(f'地图文件缺少maps键: {path}')
+                except Exception as e:
+                    print(f'加载地图文件出错: {path}, 错误: {e}')
+        
+        # 确保所有必要的键都存在
+        required_keys = ['maps', 'ground', 'pipe', 'step', 'brick', 'box', 'enemy', 'checkpoint', 'flagpole']
+        for key in required_keys:
+            if key not in self.map_data:
+                print(f'地图数据缺少键: {key}，添加空列表')
+                self.map_data[key] = []
+                
+        print(f'最终地图数据键: {list(self.map_data.keys())}')
+        return self.map_data
 
     def setup_background(self):
         '''game_window窗口矩形
@@ -94,34 +166,56 @@ class Level:
     def setup_flagpole(self):
         """设置旗杆和旗子，从JSON数据中读取"""
         self.flagpole_group = pygame.sprite.Group()
+        self.flag = None  # 初始化旗子引用
         
-        # 从地图数据中读取旗杆信息
-        if 'flagpole' in self.map_data:
-            for data in self.map_data['flagpole']:
-                # 根据type类型创建不同的旗杆部件
-                if data['type'] == 0:  # 旗杆顶部
-                    sprite = stuff.Flagpole(data['x'], data['y'], 10, 10, 'flagpole_top')
-                    sprite.image.fill((100, 100, 100))  # 灰色旗杆顶部
-                elif data['type'] == 1:  # 旗杆杆身
-                    sprite = stuff.Flagpole(data['x'], data['y'], 10, 40, 'flagpole_pole')
-                    sprite.image.fill((100, 100, 100))  # 灰色旗杆
-                elif data['type'] == 2:  # 旗子
-                    sprite = stuff.Flag(data['x'], data['y'])
-                    self.flag = sprite  # 保存旗子引用，用于动画
-                
-                self.flagpole_group.add(sprite)
+        try:
+            # 从地图数据中读取旗杆信息
+            if 'flagpole' in self.map_data and self.map_data['flagpole']:
+                for data in self.map_data['flagpole']:
+                    try:
+                        # 根据type类型创建不同的旗杆部件
+                        if data['type'] == 0:  # 旗杆顶部
+                            sprite = stuff.Flagpole(data['x'], data['y'], 10, 10, 'flagpole_top')
+                            sprite.image.fill((100, 100, 100))  # 灰色旗杆顶部
+                        elif data['type'] == 1:  # 旗杆杆身
+                            sprite = stuff.Flagpole(data['x'], data['y'], 10, 40, 'flagpole_pole')
+                            sprite.image.fill((100, 100, 100))  # 灰色旗杆
+                        elif data['type'] == 2:  # 旗子
+                            sprite = stuff.Flag(data['x'], data['y'])
+                            self.flag = sprite  # 保存旗子引用，用于动画
+                        else:
+                            print(f"未知的旗杆类型: {data['type']}")
+                            continue
+                        
+                        self.flagpole_group.add(sprite)
+                    except Exception as e:
+                        print(f"创建旗杆部件时出错: {e}, 数据: {data}")
+        except Exception as e:
+            print(f"设置旗杆时出错: {e}")
+            import traceback
+            traceback.print_exc()
         
     def setup_enemies(self):
         self.dying_group=pygame.sprite.Group()
         self.shell_group=pygame.sprite.Group()
         self.enemy_group=pygame.sprite.Group()
         self.enemy_group_dict={}
-        for enemy_group_data in self.map_data['enemy']:
-            group=pygame.sprite.Group()
-            for enemy_group_id,enemy_list in enemy_group_data.items():
-                for enemy_data in enemy_list:
-                    group.add(enemy.create_enemy(enemy_data))
-                self.enemy_group_dict[enemy_group_id]=group
+        try:
+            for enemy_group_data in self.map_data['enemy']:
+                group=pygame.sprite.Group()
+                for enemy_group_id,enemy_list in enemy_group_data.items():
+                    for enemy_data in enemy_list:
+                        try:
+                            enemy_obj = enemy.create_enemy(enemy_data)
+                            group.add(enemy_obj)
+                            print(f"成功创建敌人: 类型={enemy_data['type']}")
+                        except Exception as e:
+                            print(f"创建敌人失败: {e}, 数据: {enemy_data}")
+                    self.enemy_group_dict[enemy_group_id]=group
+        except Exception as e:
+            print(f"设置敌人时出错: {e}")
+            import traceback
+            traceback.print_exc()
     def setup_checkpoint(self):
         self.checkpoint_group=pygame.sprite.Group()
         for item in self.map_data['checkpoint']:
@@ -129,6 +223,41 @@ class Level:
             checkpoint_type=item['type']
             enemy_groupid=item.get('enemy_groupid')
             self.checkpoint_group.add(stuff.Checkpoint(x,y,w,h,checkpoint_type,enemy_groupid))
+
+    def check_player_position(self):
+        """检查玩家位置并在关卡末尾更新关卡编号"""
+        if self.finished: # If already finished (e.g. by flagpole or previous call), do nothing
+            return
+
+        player_x = self.player.rect.x
+        # player_y = self.player.rect.y # player_y is not used in this logic
+        current_level_num = self.game_info['level_num']
+        
+        should_trigger_finish = False
+        target_level = current_level_num + 1 # Default next level if general condition met
+
+        # General condition: Reaching the defined end of the map
+        if player_x >= self.end_x:
+            should_trigger_finish = True
+            print(f"关卡结束条件满足 (general, player_x: {player_x} >= end_x: {self.end_x}, current_level: {current_level_num})")
+
+        # Specific condition for Level 2, if player reaches x=8184
+        # Added based on the proposal to ensure transition for level 2 at this point.
+        if current_level_num == 2 and player_x >= 8184: # Use if as the level 1 specific x-coordinate check is removed
+            should_trigger_finish = True
+            target_level = 3 # Explicitly set next level to 3 for this specific trigger
+            print(f"关卡结束条件满足 (level 2 specific, player_x: {player_x} >= 8184)")
+
+        if should_trigger_finish:
+            # Ensure self.finished is checked before modifying game_info,
+            # though the initial guard `if self.finished: return` should cover this.
+            self.game_info['level_num'] = target_level
+            self.finished = True
+            self.next = 'load_screen'  # Ensure the game knows to load the next level
+            # Note: The 'next' state after finishing a level (e.g., 'load_level', 'game_over')
+            # is typically handled where self.finished is checked in the main game loop or state manager.
+            # This method focuses on setting the 'finished' flag and updating 'level_num'.
+            print(f"最终决定：切换到关卡 {self.game_info['level_num']}. Next state: {self.next}")
 
     def update(self, surface,keys):
         self.current_time=pygame.time.get_ticks()
@@ -159,6 +288,7 @@ class Level:
             self.check_coin_collisions()
             # 检查旗杆碰撞
             self.check_flagpole_collisions()
+            self.check_player_position() # Added this line
 
         self.draw(surface)
     def is_frozen(self):
@@ -168,6 +298,7 @@ class Level:
 
 
     def update_player_position(self):
+        # 更新玩家位置的逻辑
         #x direction
         self.player.rect.x+=self.player.x_vel
         if self.player.rect.x<self.start_x:
@@ -179,6 +310,7 @@ class Level:
         if not self.player.dead:
             self.player.rect.y+=self.player.y_vel
             self.check_y_collisions()
+            print(f'Player position: x={self.player.rect.x}, y={self.player.rect.y}')
 
     def check_x_collisions(self):
         check_group=pygame.sprite.Group(self.ground_item_group,self.brick_group,self.box_group)
@@ -378,13 +510,30 @@ class Level:
         # 只有当玩家不处于死亡或变身状态时才检查
         if self.player.dead or self.is_frozen():
             return
+            
+        # 如果旗子已经到达底部，处理关卡完成逻辑
+        if hasattr(self, 'flag') and self.flag is not None and self.flag.state == 'bottom':
+            if not self.flag_pole_complete:
+                # 设置旗杆完成标志
+                self.flag_pole_complete = True
+                # 设置城堡计时器
+                self.castle_timer = self.current_time
+                # 播放关卡完成音效
+                setup.SOUND.play_music('flagpole')
+                # 让玩家向右走向城堡
+                self.player.state = 'walk_auto'
+                self.player.x_vel = 1
+                self.player.facing_right = True
+            elif self.current_time - self.castle_timer > 3000:
+                # 3秒后完成关卡
+                self.finished = True
+                self.update_game_info()
+            return
+            
         # 检查与旗杆组的碰撞
         flagpole_hit = pygame.sprite.spritecollideany(self.player, self.flagpole_group)
         if flagpole_hit:
-            # 如果玩家碰到了旗杆，设置玩家状态为旗杆状态
-            #if self.player.state=='walk_auto':
-                #return
-            # 新增：如果已经完成滑旗，不再切换状态
+            # 如果已经完成滑旗，不再切换状态
             if getattr(self.player, 'flag_sliding_complete', False):
                 return
             elif self.player.state != 'flagpole':
@@ -410,14 +559,13 @@ class Level:
                 self.game_info['score'] = self.game_info.get('score', 0) + score
                 
                 # 如果有旗子，开始旗子下滑动画
-                if self.flag.state == 'top':
+                if self.flag is not None and self.flag.state == 'top':
                     self.flag.state = 'slide'
-                    # 尝试播放旗杆音效，如果不存在则播放其他音效
+                    # 播放旗杆音效
                     setup.SOUND.stop_music()
                     setup.SOUND.play_sound('one_up')
 
 
-            
     def check_coin_collisions(self):
         """检查玩家与所有金币的碰撞"""
         # 检测与动态金币的碰撞
@@ -443,10 +591,29 @@ class Level:
     def update_game_info(self):
         if self.player.dead:
             self.game_info['lives']-=1
-            self.game_info['coin']=0
-            self.game_info['score']=0
-        if self.game_info['lives']==0:
-            self.next='game_over'
+            # 只在游戏结束时重置金币和分数
+            if self.game_info['lives'] == 0:
+                self.game_info['coin'] = 0
+                self.game_info['score'] = 0
+        elif self.flag_pole_complete:
+            # 玩家完成当前关卡，进入下一关
+            current_level = self.game_info.get('level_num', 1)
+            next_level = current_level + 1
+            
+            # 特殊处理：如果当前是第二关，下一关应该是第四关（跳过第三关）
+            if current_level == 2:
+                next_level = 4
+                print(f'从第二关直接跳转到第四关')
+            
+            self.game_info['level_num'] = next_level
+            print(f'关卡完成！进入第{next_level}关')
+            
+            # 可以在这里添加关卡奖励
+            self.game_info['score'] += 1000  # 完成关卡奖励1000分
+            
+        # 根据生命值决定下一个状态
+        if self.game_info['lives'] == 0:
+            self.next = 'game_over'
         else:
-            self.next='load_screen'
+            self.next = 'load_screen'
 

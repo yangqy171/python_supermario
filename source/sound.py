@@ -7,8 +7,11 @@ class Sound:
     """音效管理类，负责加载和播放游戏中的音效和音乐"""
     def __init__(self):
         """初始化音效系统"""
-        self.sound_dir = os.path.join('resources', 'sound')
-        self.music_dir = os.path.join('resources', 'music')
+        # 使用相对于当前脚本的路径
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.dirname(current_dir)
+        self.sound_dir = os.path.join(base_dir, 'resources', 'sound')
+        self.music_dir = os.path.join(base_dir, 'resources', 'music')
         
         self.sound_dict = {}  # 存储音效
         self.music_dict = {}  # 存储音乐

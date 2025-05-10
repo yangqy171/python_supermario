@@ -9,6 +9,10 @@ def create_enemy(enemy_data):
         enemy=Goomba(x,y_bottom,direction,'goomba',color)
     elif enemy_type==1:#乌龟
         enemy=Koopa(x,y_bottom,direction,'koopa',color)
+    else:
+        # 处理未知敌人类型，默认创建Goomba
+        print(f"警告：未知敌人类型 {enemy_type}，默认创建Goomba")
+        enemy=Goomba(x,y_bottom,direction,'goomba',color)
     return enemy
 
 class Enemy(pygame.sprite.Sprite):
