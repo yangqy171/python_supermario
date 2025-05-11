@@ -124,9 +124,15 @@ class Level:
 
     def setup_ground_items(self):
         self.ground_item_group=pygame.sprite.Group()
+        self.type3_pipe_sprites_group = pygame.sprite.Group() # New group for type 3 pipes
+        self.type3_pipe_rects = []  # 记录type=3管道的rect信息
         for name in ['ground','pipe','step']:
             for item in self.map_data[name]:
-                self.ground_item_group.add(stuff.Item(item['x'],item['y'],item['width'],item['height'],name))
+                sprite = stuff.Item(item['x'],item['y'],item['width'],item['height'],name)
+                self.ground_item_group.add(sprite)
+                if name == 'pipe' and item.get('type') == 3:
+                    self.type3_pipe_sprites_group.add(sprite)
+                    self.type3_pipe_rects.append(pygame.Rect(item['x'], item['y'], item['width'], item['height']))
                 
     def setup_static_coins(self):
         """设置地图中的静态金币"""
@@ -248,6 +254,13 @@ class Level:
             should_trigger_finish = True
             target_level = 3 # Explicitly set next level to 3 for this specific trigger
             print(f"关卡结束条件满足 (level 2 specific, player_x: {player_x} >= 8184)")
+        if current_level_num == 3 and player_x >= 6199: # Use if as the level 1 specific x-coordinate check is removed
+            should_trigger_finish = True
+            target_level = 4 # Explicitly set next level to 3 for this specific trigger
+            print(f"关卡结束条件满足 (level 3 specific, player_x: {player_x} >= 6199)")
+        if current_level_num == 4 and player_x >= 6809: # Use if as the level 1 specific x-coordinate check is removed
+            self.next="game win"
+            print(f"关卡结束条件满足 (level 4 specific, player_x: {player_x} >= 6809)")
 
         if should_trigger_finish:
             # Ensure self.finished is checked before modifying game_info,
@@ -495,7 +508,12 @@ class Level:
         self.shell_group.draw(self.game_ground)
         self.flagpole_group.draw(self.game_ground)
         self.enemy_group.draw(self.game_ground)
-
+        # 用地图图片抠出type=3管道区域，覆盖在所有元素之上
+        if hasattr(self, 'type3_pipe_rects'):
+            for rect in self.type3_pipe_rects:
+                pipe_img = self.background.subsurface(rect).copy()
+                self.game_ground.blit(pipe_img, rect)
+        # 绘制信息栏等
         surface.blit(self.game_ground, (0,0),self.game_window)
         self.info.draw(surface)
     def check_checkpoints(self):
