@@ -27,6 +27,12 @@ class Info:
             self.player_image = tools.get_image(setup.GRAPHICS['mario_bros'], 178, 32, 12, 16, (0, 0, 0), C.BG_MULTI)
         elif self.state=='game_over':
             self.state_labels.append((self.create_label('GAME OVER'),(280,300)))
+        elif self.state=='game_complete':
+            self.state_labels.append((self.create_label('YOU WIN!'),(280,250)))
+            self.state_labels.append((self.create_label('CONGRATULATIONS!'),(200,300)))
+            score_count = self.game_info.get('score', 0)
+            self.state_labels.append((self.create_label('YOUR SCORE: {:06d}'.format(score_count)),(200,350)))
+            self.state_labels.append((self.create_label('PRESS ANY TO MENU'),(200,450)))
     def create_info_labels(self):
         self.info_labels=[]
         self.info_labels.append((self.create_label('MARIO'), (75, 30)))

@@ -259,8 +259,11 @@ class Level:
             target_level = 4 # Explicitly set next level to 3 for this specific trigger
             print(f"关卡结束条件满足 (level 3 specific, player_x: {player_x} >= 6199)")
         if current_level_num == 4 and player_x >= 6809: # Use if as the level 1 specific x-coordinate check is removed
-            self.next="game win"
-            print(f"关卡结束条件满足 (level 4 specific, player_x: {player_x} >= 6809)")
+            # 游戏通关，切换到通关界面
+            self.finished = True
+            self.next = 'game_complete'  # 切换到通关状态
+            print(f"游戏通关！ (level 4 specific, player_x: {player_x} >= 6809)")
+            
 
         if should_trigger_finish:
             # Ensure self.finished is checked before modifying game_info,

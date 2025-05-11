@@ -11,7 +11,7 @@ class MainMenu:
             'coin':0,
             'lives':1000,
             'player_state':'small',
-            'level_num':3,
+            'level_num':1,
         }
         self.start(game_info)
     def start(self,game_info):
@@ -74,6 +74,5 @@ class MainMenu:
                 'coin':0,
                 'lives':1000,
                 'player_state':'small',
-                'level_num':3
-            }
+                'level_num':1            }
         )
