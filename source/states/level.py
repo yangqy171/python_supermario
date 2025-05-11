@@ -254,7 +254,7 @@ class Level:
             should_trigger_finish = True
             target_level = 3 # Explicitly set next level to 3 for this specific trigger
             print(f"关卡结束条件满足 (level 2 specific, player_x: {player_x} >= 8184)")
-        if current_level_num == 3 and player_x >= 6199: # Use if as the level 1 specific x-coordinate check is removed
+        if current_level_num == 3 and player_x >= 6926: # Use if as the level 1 specific x-coordinate check is removed
             should_trigger_finish = True
             target_level = 4 # Explicitly set next level to 3 for this specific trigger
             print(f"关卡结束条件满足 (level 3 specific, player_x: {player_x} >= 6199)")

@@ -21,6 +21,7 @@ class Flagpole(Item):
     def __init__(self, x, y, width, height, name='flagpole'):
         Item.__init__(self, x, y, width, height, name)
         self.image.fill((100, 100, 100))  # 灰色旗杆
+        print(f"[DEBUG] Flagpole创建: name={self.name}, rect=({self.rect.x},{self.rect.y},{self.rect.width},{self.rect.height})")
 
 class Flag(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -31,6 +32,7 @@ class Flag(pygame.sprite.Sprite):
         self.rect.y = y
         self.state = 'top'  # 旗子状态：top(顶部), slide(滑下), bottom(底部)
         self.y_vel = 5  # 下滑速度
+        print(f"[DEBUG] Flag创建: rect=({self.rect.x},{self.rect.y},{self.rect.width},{self.rect.height})")
 
     def update(self):
         if self.state == 'slide':
