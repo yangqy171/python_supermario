@@ -9,7 +9,7 @@ class MainMenu:
         game_info={
             'score':0,
             'coin':0,
-            'lives':1000,
+            'lives':3,
             'player_state':'small',
             'level_num':1,
         }
@@ -72,7 +72,7 @@ class MainMenu:
             {
                 'score':0,
                 'coin':0,
-                'lives':1000,
+                'lives':3,
                 'player_state':'small',
                 'level_num':1            }
         )

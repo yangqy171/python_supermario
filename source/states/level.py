@@ -327,7 +327,7 @@ class Level:
         if not self.player.dead:
             self.player.rect.y+=self.player.y_vel
             self.check_y_collisions()
-            print(f'Player position: x={self.player.rect.x}, y={self.player.rect.y}')
+            #print(f'Player position: x={self.player.rect.x}, y={self.player.rect.y}')
 
     def check_x_collisions(self):
         check_group=pygame.sprite.Group(self.ground_item_group,self.brick_group,self.box_group)
