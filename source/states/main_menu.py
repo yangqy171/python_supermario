@@ -74,5 +74,5 @@ class MainMenu:
                 'coin':0,
                 'lives':3,
                 'player_state':'small',
-                'level_num':1            }
+                'level_num':4            }
         )

@@ -264,6 +264,28 @@ class Level:
             self.next = 'game_complete'  # 切换到通关状态
             print(f"游戏通关！ (level 4 specific, player_x: {player_x} >= 6809)")
             
+            # 更新最高分
+            try:
+                current_score = self.game_info.get('score', 0)
+                info_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'Info.json')
+                
+                # 读取现有最高分
+                if os.path.exists(info_path):
+                    with open(info_path, 'r') as f:
+                        data = json.load(f)
+                        topscore = data.get('topscore', 0)
+                else:
+                    topscore = 0
+                
+                # 比较并更新
+                if current_score > topscore:
+                    data['topscore'] = current_score
+                    with open(info_path, 'w') as f:
+                        json.dump(data, f)
+                    print(f'更新最高分: {current_score}')
+            except Exception as e:
+                print(f'更新最高分失败: {e}')
+            
 
         if should_trigger_finish:
             # Ensure self.finished is checked before modifying game_info,

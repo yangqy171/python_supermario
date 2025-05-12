@@ -3,6 +3,8 @@ from .. import constants as C
 from . import coin
 pygame.font.init()
 from ..import setup,tools
+import json
+import os
 
 class Info:
     def __init__(self,state,game_info):
@@ -17,8 +19,18 @@ class Info:
         if self.state=='main_menu':
             self.state_labels.append((self.create_label('1 PLATER  GAME'),(272,360)))
             self.state_labels.append((self.create_label('2 PLATER  GAME'),(272,405)))
-            self.state_labels.append((self.create_label('TOP - '),(290,465)))
-            self.state_labels.append((self.create_label('000000'),(400,465)))
+            
+            # 读取历史最高分
+            try:
+                info_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'Info.json')
+                with open(info_path, 'r') as f:
+                    data = json.load(f)
+                    topscore = data.get('topscore', 0)
+            except Exception as e:
+                print(f'读取最高分失败: {e}')
+                topscore = 0
+            
+            self.state_labels.append((self.create_label(f'TOP - {topscore:06d}'),(290,465)))
         elif self.state=='load_screen':
             self.state_labels.append((self.create_label('WORLD'),(280,200)))
             level_num = self.game_info.get('level_num', 1)
