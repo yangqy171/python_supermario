@@ -329,7 +329,40 @@ class Level:
             self.check_flagpole_collisions()
             self.check_player_position() # Added this line
 
+        if keys[pygame.K_q]:
+            self.save_game_state()
+
         self.draw(surface)
+    def save_game_state(self):
+        """保存当前游戏状态到Info.json."""
+        try:
+            info_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'Info.json')
+            
+            # 读取现有数据以保留topscore
+            if os.path.exists(info_path):
+                with open(info_path, 'r') as f:
+                    data = json.load(f)
+            else:
+                data = {} # 如果文件不存在，创建一个新的字典
+
+            # 更新需要保存的游戏状态
+            data['score'] = self.game_info.get('score', 0)
+            data['coin'] = self.game_info.get('coin', 0)
+            data['lives'] = self.game_info.get('lives', 3)
+            data['level_num'] = self.game_info.get('level_num', 1)
+            # topscore 通常在游戏结束或特定逻辑中更新，这里仅保存当前进度，不修改topscore
+            # 如果Info.json中没有topscore，则初始化为0
+            if 'topscore' not in data:
+                data['topscore'] = 0
+
+            with open(info_path, 'w') as f:
+                json.dump(data, f)
+            print(f'游戏状态已保存到 {info_path}')
+            # 可以选择在这里给用户一些反馈，比如屏幕上显示“已保存”
+
+        except Exception as e:
+            print(f'保存游戏状态失败: {e}')
+
     def is_frozen(self):
         # 检查玩家是否处于变身状态，此时游戏应该暂停其他更新
         frozen = self.player.state in ['small2big','big2small','big2fire','fire2small']

@@ -17,8 +17,8 @@ class Info:
     def create_state_labels(self):
         self.state_labels=[]
         if self.state=='main_menu':
-            self.state_labels.append((self.create_label('1 PLATER  GAME'),(272,360)))
-            self.state_labels.append((self.create_label('2 PLATER  GAME'),(272,405)))
+            self.state_labels.append((self.create_label('1 NEW  GAME'),(272,360)))
+            self.state_labels.append((self.create_label('2 LAST  GAME'),(272,405)))
             
             # 读取历史最高分
             try:
