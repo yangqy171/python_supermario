@@ -49,7 +49,7 @@ class Info:
         self.info_labels=[]
         self.info_labels.append((self.create_label('MARIO'), (75, 30)))
         self.info_labels.append((self.create_label('WORLD'), (450, 30)))
-        self.info_labels.append((self.create_label('TIME'), (625, 30)))
+        #self.info_labels.append((self.create_label('TIME'), (625, 30)))
         score_count=self.game_info['score']
         self.info_labels.append((self.create_label('{:06d}'.format(score_count)), (75, 55)))
         # 初始化金币计数
